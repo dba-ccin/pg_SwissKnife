@@ -7,6 +7,10 @@ Haptomai - haptomai@gmail.com
 
 License : 
 
+Associed tools :
+    - siren_isvalid(text) : Check french businesses and nonprofit associations SIRET number according to Luhn''s algorithm.
+    - siret_isvalid(text) : Check french establishments and facilities SIREN number according to Luhn''s algorithm.
+
 */
 
 CREATE OR REPLACE FUNCTION luhn_verify(int8)
@@ -58,3 +62,69 @@ COMMENT ON FUNCTION luhn_verify(int8) IS 'Return true if the last digit of the
 input is a correct check digit for the rest of the input according to Luhn''s
 algorithm.';
 
+
+/*
+    Check SIRET / SIREN number with Luhn algorithm implementation for PostgreSQL
+    see :
+        https://en.wikipedia.org/wiki/SIRET_code 
+        https://en.wikipedia.org/wiki/SIREN_code
+*/
+
+
+CREATE OR REPLACE FUNCTION siren_isvalid(text) 
+    RETURNS BOOLEAN AS 
+$$
+-- Take the sum of the
+-- doubled digits and the even-numbered undoubled digits, and see if
+-- the sum is evenly divisible by zero.
+
+DECLARE
+    response boolean;
+
+BEGIN
+    CASE   
+        WHEN $1 ~ '[^0-9]' THEN RETURN FALSE;
+            -- If the passed parameter contains anything other than digits, return false
+        ELSE
+            SELECT into response luhn_verify($1::int8);
+            RETURN response;
+
+     END CASE;
+END;
+ 
+$$ 
+  LANGUAGE plpgsql
+IMMUTABLE
+STRICT;
+
+COMMENT ON FUNCTION siren_isvalid(text) IS 'Return true if SIREN number according to Luhn''s algorithm.';
+
+
+
+CREATE OR REPLACE FUNCTION siret_isvalid(text) 
+    RETURNS BOOLEAN AS 
+$$
+-- Take the sum of the
+-- doubled digits and the even-numbered undoubled digits, and see if
+-- the sum is evenly divisible by zero.
+
+DECLARE
+    response boolean;
+
+BEGIN
+    CASE   
+        WHEN $1 ~ '[^0-9]' THEN RETURN FALSE;
+            -- If the passed parameter contains anything other than digits, return false
+        ELSE
+            SELECT into response luhn_verify($1::int8);
+            RETURN response;
+
+     END CASE;
+END;
+ 
+$$ 
+  LANGUAGE plpgsql
+IMMUTABLE
+STRICT;
+
+COMMENT ON FUNCTION siret_isvalid(text) IS 'Return true if SIRET number according to Luhn''s algorithm.';
