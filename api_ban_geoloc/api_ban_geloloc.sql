@@ -50,16 +50,16 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
             street : position « à la voie », placé approximativement au centre de celle-ci
             locality : lieu-dit
             municipality : numéro « à la commune »
-        housenumber : numéro avec indice de répétition éventuel (bis, ter, A, B)
-        name : numéro éventuel et nom de voie ou lieu dit
-        street : nom de voie
-        postcode : code postal
-        city : nom de la commune
-        # district : nom de l’arrondissement (Paris/Lyon/Marseille)
-        # oldcitycode : code INSEE de la commune ancienne (le cas échéant)
-        # oldcity : nom de la commune ancienne (le cas échéant)
-        citycode : code INSEE de la commune
-        context : n° de département, nom de département et de région
+        housenumber : (optionnel) numéro avec indice de répétition éventuel (bis, ter, A, B)
+        name : (optionnel) numéro éventuel et nom de voie ou lieu dit
+        street : (optionnel) nom de voie
+        postcode : (optionnel) code postal
+        city : (optionnel) nom de la commune
+        # district : (optionnel) nom de l’arrondissement (Paris/Lyon/Marseille)
+        # oldcitycode : (optionnel) code INSEE de la commune ancienne (le cas échéant)
+        # oldcity : (optionnel) nom de la commune ancienne (le cas échéant)
+        citycode : (optionnel) code INSEE de la commune
+        context : (optionnel) n° de département, nom de département et de région
         x_epsg4326 : coordonnées géographique en projection légale
         y_epsg4326 : coordonnées géographique en projection légale
         importance : indicateur d’importance (champ technique)
@@ -115,15 +115,37 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
     score = round(jresult["features"][0]["properties"]["score"], 3)
     id = jresult["features"][0]["properties"]["id"]
     type = jresult["features"][0]["properties"]["type"]
-    housenumber = jresult["features"][0]["properties"]["housenumber"]
-    name = jresult["features"][0]["properties"]["name"]
-    street = jresult["features"][0]["properties"]["street"]
-    postcode = jresult["features"][0]["properties"]["postcode"]
-    city = jresult["features"][0]["properties"]["city"]
-    citycode = jresult["features"][0]["properties"]["citycode"]
-    context = jresult["features"][0]["properties"]["context"]
+    
+    # Traitements des champs optionels
+    # cf. https://github.com/geocoders/geocodejson-spec/tree/master/draft
+    
+    properties = jresult["features"][0]["properties"]
+    
+    for key in properties :
+        if 'housenumber' in key:
+            housenumber = jresult["features"][0]["properties"]["housenumber"]
+
+        if 'name' in key:
+            name = jresult["features"][0]["properties"]["name"]
+
+        if 'street' in key:
+            street = jresult["features"][0]["properties"]["street"]
+
+        if 'postcode' in key:
+            postcode = jresult["features"][0]["properties"]["postcode"]
+
+        if 'city' in key:
+            city = jresult["features"][0]["properties"]["city"]
+
+        if 'citycode' in key:
+            citycode = jresult["features"][0]["properties"]["citycode"]
+
+        if 'context' in key:
+            context = jresult["features"][0]["properties"]["context"]
+
     x_epsg4326 = jresult["features"][0]["properties"]["x"]
     y_epsg4326 = jresult["features"][0]["properties"]["y"]
+    
     importance = jresult["features"][0]["properties"]["importance"]
     attribution = jresult["attribution"]
     licence = jresult["licence"]
