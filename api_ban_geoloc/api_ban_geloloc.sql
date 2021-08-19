@@ -88,7 +88,7 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
     street = None
     postcode = None
     city = None
-    # district = None
+    district = None
     # oldcitycode = None
     # oldcity = None
     citycode = None
