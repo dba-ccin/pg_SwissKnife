@@ -1,6 +1,5 @@
 DROP TYPE IF EXISTS struct_ban_api_geoloc CASCADE ;
 CREATE TYPE struct_ban_api_geoloc AS (
-    adresse character varying, -- Adresse passée en paramètre
     query character varying, -- Adresse envoyée pour sa géolocalisation
     label character varying(150), -- Libellé complet de l’adresse retournée
     score numeric, -- Indice de confiance de la géolocalisation
@@ -40,8 +39,7 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
     Les coordonnées sont exprimées en WGS-84 (EPSG 4326)
 
     Les attributs retournés sont :
-        adresse : adresse passée en paramètre
-        query : adresse envoyée pour sa géolocalisation
+        query : adresse envoyée pour géolocalisation
         label : libellé complet de l’adresse retournée
         score : valeur de 0 à 1 indiquant la pertinence du résultat
         id : identifiant de l’adresse (clef d’interopérabilité)
@@ -155,7 +153,6 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
     
     return [
         (
-            adresse,
             query,
             label ,
             score ,
