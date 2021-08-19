@@ -15,7 +15,7 @@ CREATE TYPE struct_ban_api_geoloc AS (
     street character varying, --  Nom de voie
     postcode character varying(10), -- Code postal
     city character varying, -- Nom de la commune
-    -- district character varying -- Nom de l’arrondissement (Paris/Lyon/Marseille)
+    district character varying, -- Nom de l’arrondissement (Paris/Lyon/Marseille)
     -- oldcitycode character varying, -- Code INSEE de la commune ancienne (le cas échéant)
     -- oldcity character varying, -- Nom de la commune ancienne (le cas échéant)
     citycode character(5), -- Code INSEE de la commune
@@ -55,7 +55,7 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
         street : (optionnel) nom de voie
         postcode : (optionnel) code postal
         city : (optionnel) nom de la commune
-        # district : (optionnel) nom de l’arrondissement (Paris/Lyon/Marseille)
+        district : (optionnel) nom de l’arrondissement (Paris/Lyon/Marseille)
         # oldcitycode : (optionnel) code INSEE de la commune ancienne (le cas échéant)
         # oldcity : (optionnel) nom de la commune ancienne (le cas échéant)
         citycode : (optionnel) code INSEE de la commune
@@ -137,6 +137,9 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
         if 'city' in key:
             city = jresult["features"][0]["properties"]["city"]
 
+        if 'district' in key:
+            district = jresult["features"][0]["properties"]["district"]
+
         if 'citycode' in key:
             citycode = jresult["features"][0]["properties"]["citycode"]
 
@@ -163,7 +166,7 @@ CREATE FUNCTION py_ban_row_geocoding(adresse text)
             street ,
             postcode ,
             city ,
-            # district ,
+            district ,
             # oldcitycode ,
             # oldcity ,
             citycode ,
