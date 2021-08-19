@@ -44,7 +44,7 @@ Dans une base existante,
     cf. api_ban_geloloc.sql
 
 ### Testing
-    SELECT * from py_ban_geocoding('7 rue jeanne d''Arc Rouen');
+    SELECT * from py_ban_row_geocoding('7 rue jeanne d''Arc Rouen');
 
 |adresse|ban_adresse|ban_x_epsg4326|ban_y_epsg4326|ban_score|ban_precision|ban_source|ban_licence|ban_date|
 |--------|--------|--------|--------|--------|--------|--------|--------|--------|

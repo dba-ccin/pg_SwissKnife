@@ -1,27 +1,72 @@
 DROP TYPE IF EXISTS struct_ban_api_geoloc CASCADE ;
-CREATE  TYPE struct_ban_api_geoloc AS (
-    adresse character varying(150), -- Adresse de géolocalisation initiale (concaténation : [adresse]+" "+[code_com_etab]+" "+[nom_com_etab] ou adresse corrigée manuellement
-    ban_adresse character varying(150), -- Adresse de géolocalisation retournée
-    -- ban_geom_epsg2154 geometry(Point,2154), -- Géométrie du point de localisation (Point, projection Lambert 93 (Borne France) - EPSG 2154)
-    -- ban_x_epsg2154 numeric, -- X du point de localisation (Point, projection Lambert 93 (Borne France) - EPSG 2154)
-    -- ban_y_epsg2154 numeric, -- Y du point de localisation (Point, projection Lambert 93 (Borne France) - EPSG 2154)
-    -- ban_geom_epsg4326 geometry(Point,2154), -- Géométrie du point de localisation (Point, projection WGS-84 (EPSG 4326)
-    ban_x_epsg4326 numeric, -- X du point de localisation (Point, projection WGS-84 (EPSG 4326)
-    ban_y_epsg4326 numeric, -- Y du point de localisation (Point, projection WGS-84 (EPSG 4326)
-    ban_score numeric, -- Indice de confiance de la géolocalisation
-    ban_precision integer, -- Degré de précision de la géolocalisation: du moins précis (5- à la commune) au plus précis (8– à l’adresse, voire 9- au bâtiment)
-    ban_source character varying(25), -- Source ou origine de la géolocalisation (Gmaps, BAN, Observatoire…)
-    ban_licence character varying(25), -- Licence d’utilisation (OdbL, autres…)
-    ban_date date -- Date de la géolocalisation, quelle que soit son origine
+CREATE TYPE struct_ban_api_geoloc AS (
+    adresse character varying, -- Adresse passée en paramètre
+    query character varying, -- Adresse envoyée pour sa géolocalisation
+    label character varying(150), -- Libellé complet de l’adresse retournée
+    score numeric, -- Indice de confiance de la géolocalisation
+    id character varying, -- identifiant de l’adresse (clef d’interopérabilité)
+    type character varying, -- Type de résultat trouvé :
+                                -- housenumber : numéro « à la plaque »
+                                -- street : position « à la voie », placé approximativement au centre de celle-ci
+                                -- locality : lieu-dit
+                                -- municipality : numéro « à la commune »
+    housenumber character varying(10), -- numéro avec indice de répétition éventuel (bis, ter, A, B)
+    name character varying, --  Numéro éventuel et nom de voie ou lieu dit
+    street character varying, --  Nom de voie
+    postcode character varying(10), -- Code postal
+    city character varying, -- Nom de la commune
+    -- district character varying -- Nom de l’arrondissement (Paris/Lyon/Marseille)
+    -- oldcitycode character varying, -- Code INSEE de la commune ancienne (le cas échéant)
+    -- oldcity character varying, -- Nom de la commune ancienne (le cas échéant)
+    citycode character(5), -- Code INSEE de la commune
+    context character varying, -- N° de département, nom de département et de région
+    x_epsg4326 numeric, -- X du point de localisation (Point, projection WGS-84 (EPSG 4326)
+    y_epsg4326 numeric, -- Y du point de localisation (Point, projection WGS-84 (EPSG 4326)
+    importance character varying, -- indicateur d’importance (champ technique)
+    attribution character varying(25), -- Source de la géolocalisation
+    licence character varying(25), -- Licence d’utilisation (OdbL, autres…)
+    date_geoloc date -- Date de la géolocalisation, quelle que soit son origine
    )
 ;
 
-DROP FUNCTION IF EXISTS py_ban_geocoding(adresse text);
-CREATE FUNCTION py_ban_geocoding(adresse text)
+DROP FUNCTION IF EXISTS py_ban_row_geocoding(adresse text);
+CREATE FUNCTION py_ban_row_geocoding(adresse text)
     RETURNS SETOF struct_ban_api_geoloc
 
   AS $$
   # Corps de la fonction PL/Python
+
+    """
+    Les coordonnées sont exprimées en WGS-84 (EPSG 4326)
+
+    Les attributs retournés sont :
+        adresse : adresse passée en paramètre
+        query : adresse envoyée pour sa géolocalisation
+        label : libellé complet de l’adresse retournée
+        score : valeur de 0 à 1 indiquant la pertinence du résultat
+        id : identifiant de l’adresse (clef d’interopérabilité)
+        type : type de résultat trouvé
+            housenumber : numéro « à la plaque »
+            street : position « à la voie », placé approximativement au centre de celle-ci
+            locality : lieu-dit
+            municipality : numéro « à la commune »
+        housenumber : numéro avec indice de répétition éventuel (bis, ter, A, B)
+        name : numéro éventuel et nom de voie ou lieu dit
+        street : nom de voie
+        postcode : code postal
+        city : nom de la commune
+        # district : nom de l’arrondissement (Paris/Lyon/Marseille)
+        # oldcitycode : code INSEE de la commune ancienne (le cas échéant)
+        # oldcity : nom de la commune ancienne (le cas échéant)
+        citycode : code INSEE de la commune
+        context : n° de département, nom de département et de région
+        x_epsg4326 : coordonnées géographique en projection légale
+        y_epsg4326 : coordonnées géographique en projection légale
+        importance : indicateur d’importance (champ technique)
+        attribution : source
+        licence : licence d'utilistion des données de géolocalisation
+        date_geoloc : date de la géolocalisation
+    """
 
     # Imports
     from datetime import datetime
@@ -33,19 +78,27 @@ CREATE FUNCTION py_ban_geocoding(adresse text)
     nb_resultat = 1
 
     # Déclaration des variables
-    ban_adresse = None
-    # ban_geom_epsg2154 = None
-    # ban_x_epsg2154 = None
-    # ban_y_epsg2154 = None
-    # ban_geom_epsg4326 = None
-    ban_x_epsg4326 = None
-    ban_y_epsg4326 = None
-    ban_score = None
-    ban_precision = None
-    ban_source = None
-    ban_licence = None
-    ban_date = datetime.now()
-
+    query = None
+    label = None
+    score = None
+    id = None
+    type = None
+    housenumber = None
+    name = None
+    street = None
+    postcode = None
+    city = None
+    # district = None
+    # oldcitycode = None
+    # oldcity = None
+    citycode = None
+    context = None
+    x_epsg4326 = None
+    y_epsg4326 = None
+    importance = None
+    attribution = None
+    licence = None
+    date_geoloc = datetime.now()
 
     # Création de la chaine qui sera envoyée à l'API
     payload = {'q': adresse, 'limit': nb_resultat}
@@ -57,45 +110,48 @@ CREATE FUNCTION py_ban_geocoding(adresse text)
     jresult = json.loads(r.text)
     # print(f'Retour: \n{jresult["features"][0]["properties"]["score"]}')
 
-    ban_adresse = jresult["features"][0]["properties"]["label"]
-    ban_score = round(jresult["features"][0]["properties"]["score"], 3)
-    postcode = jresult["features"][0]["properties"]["postcode"]
-    citycode = jresult["features"][0]["properties"]["citycode"]
-    ban_x_epsg4326 = jresult["features"][0]["properties"]["x"]
-    ban_y_epsg4326 = jresult["features"][0]["properties"]["y"]
-    city = jresult["features"][0]["properties"]["city"]
+    query = jresult["query"]
+    label = jresult["features"][0]["properties"]["label"]
+    score = round(jresult["features"][0]["properties"]["score"], 3)
+    id = jresult["features"][0]["properties"]["id"]
     type = jresult["features"][0]["properties"]["type"]
+    housenumber = jresult["features"][0]["properties"]["housenumber"]
+    name = jresult["features"][0]["properties"]["name"]
+    street = jresult["features"][0]["properties"]["street"]
+    postcode = jresult["features"][0]["properties"]["postcode"]
+    city = jresult["features"][0]["properties"]["city"]
+    citycode = jresult["features"][0]["properties"]["citycode"]
+    context = jresult["features"][0]["properties"]["context"]
+    x_epsg4326 = jresult["features"][0]["properties"]["x"]
+    y_epsg4326 = jresult["features"][0]["properties"]["y"]
     importance = jresult["features"][0]["properties"]["importance"]
-    ban_source = jresult["attribution"]
-    ban_licence = jresult["licence"]
-
-    # Todo : Traitement des géo
-
-    # Traitement de la précision
-    if type in ('village', 'town', 'city', 'locality' ):
-        ban_precision = 5
-    elif type == 'street':
-        ban_precision = 6
-    elif type == 'housenumber':
-        ban_precision = 9
-    else :
-        ban_precision = 5
-
+    attribution = jresult["attribution"]
+    licence = jresult["licence"]
+    
     return [
         (
             adresse,
-            ban_adresse,
-            # ban_geom_epsg2154,
-            # ban_x_epsg2154,
-            # ban_y_epsg2154,
-            # ban_geom_epsg4326,
-            ban_x_epsg4326,
-            ban_y_epsg4326,
-            ban_score,
-            ban_precision,
-            ban_source,
-            ban_licence,
-            ban_date,
+            query,
+            label ,
+            score ,
+            id ,
+            type ,
+            housenumber ,
+            name ,
+            street ,
+            postcode ,
+            city ,
+            # district ,
+            # oldcitycode ,
+            # oldcity ,
+            citycode ,
+            context ,
+            x_epsg4326 ,
+            y_epsg4326 ,
+            importance ,
+            attribution ,
+            licence ,
+            date_geoloc,
         )
     ]
 
